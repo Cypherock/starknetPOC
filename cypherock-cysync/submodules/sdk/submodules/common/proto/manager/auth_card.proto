@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+import "error.proto";
+
+package manager;
+
+/**
+ * Example of successful authentication
+ *
+ *        Host                       Device
+ * AuthCardInitiateRequest  => 
+ *                            <= AuthCardSerialSigResponse
+ * AuthCardChallengeRequest =>
+ *                            <= AuthCardChallengeSigResponse
+ * AuthCardResult           =>
+ *                            <= AuthCardFlowCompleteResponse
+ */
+
+/**
+ * Example of failed authentication
+ *
+ *        Host                       Device
+ * AuthCardInitiateRequest  => 
+ *                            <= AuthCardSerialSigResponse
+ * AuthCardResult           =>
+ *                            <= AuthCardFlowCompleteResponse
+ */
+
+enum AuthCardStatus {
+  AUTH_CARD_STATUS_INIT = 0;
+  AUTH_CARD_STATUS_USER_CONFIRMED = 1;
+  AUTH_CARD_STATUS_SERIAL_SIGNED = 2;
+  AUTH_CARD_STATUS_CHALLENGE_SIGNED = 3;
+  AUTH_CARD_STATUS_PAIRING_DONE = 4;
+}
+
+message AuthCardInitiateRequest {
+  optional uint32 card_index = 1;
+  /**
+    * true: allow pair card: 3 card taps (false 3rd beep if already paired)
+    * false, undefined: do not pair card: 2 card taps
+    */
+  optional bool is_pair_required = 2;
+}
+
+message AuthCardChallengeRequest {
+  bytes challenge = 1;
+}
+
+message AuthCardResult {
+  bool verified = 1;
+}
+
+message AuthCardSerialSigResponse {
+  bytes serial = 1;
+  bytes signature = 2;
+}
+
+message AuthCardChallengeSigResponse {
+  bytes signature = 1;
+}
+
+message AuthCardFlowCompleteResponse {
+}
+
+message AuthCardRequest {
+  oneof request {
+    AuthCardInitiateRequest initiate = 1;
+    AuthCardChallengeRequest challenge = 2;
+    AuthCardResult result = 3;
+  }
+}
+
+message AuthCardResponse {
+  oneof response {
+    AuthCardSerialSigResponse serial_signature = 1;
+    AuthCardChallengeSigResponse challenge_signature = 2;
+    error.CommonError common_error = 3;
+    AuthCardFlowCompleteResponse flow_complete = 4;
+  }
+}

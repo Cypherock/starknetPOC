@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+import "common.proto";
+import "error.proto";
+
+import "evm/common.proto";
+
+package evm;
+
+/**
+ * Example:
+ *
+ *        Host                       Device
+ *
+ * SignTxnInitiateRequest  => 
+ *                         <= SignTxnConfirmationResponse
+ * SignTxnData             =>
+ *                         <= SignTxnDataAccepted
+ *                        ....
+ * SignTxnData             =>
+ *                         <= SignTxnDataAccepted
+ *
+ * **** Device has all transaction information ****
+ *
+ * SignTxnSignatureRequest =>
+ *                         <= SignTxnSignatureResponse
+ */
+enum SignTxnStatus {
+  SIGN_TXN_STATUS_INIT = 0;
+  SIGN_TXN_STATUS_CONFIRM = 1;
+  SIGN_TXN_STATUS_VERIFY = 2;
+  SIGN_TXN_STATUS_SEED_GENERATED = 3;
+}
+
+message SignTxnInitiateRequest {
+  bytes walletId = 1;
+  repeated uint32 derivationPath = 2;
+  uint64 chain_id = 3;
+  AddressFormat address_format = 4;
+  uint32 transaction_size = 5;
+  // TODO: need to show token symbol for token transactions
+}
+
+message SignTxnConfirmationResponse {
+}
+
+message SignTxnData {
+  common.ChunkPayload chunk_payload = 1;
+}
+
+message SignTxnDataAccepted {
+  common.ChunkAck chunk_ack = 1;
+}
+
+message SignTxnSignatureResponse {
+  bytes r = 1;
+  bytes s = 2;
+  bytes v = 3;
+}
+
+message SignTxnSignatureRequest {
+}
+
+message SignTxnRequest {
+  oneof request {
+    SignTxnInitiateRequest initiate = 1;
+    SignTxnData txn_data = 2;
+    SignTxnSignatureRequest signature = 3;
+  }
+}
+
+message SignTxnResponse {
+  oneof response {
+    SignTxnConfirmationResponse confirmation = 1;
+    SignTxnDataAccepted data_accepted = 2;
+    SignTxnSignatureResponse signature = 3;
+
+    error.CommonError common_error = 4;
+  }
+}

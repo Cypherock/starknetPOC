@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+import "error.proto";
+
+package manager;
+
+/**
+ * When at least one wallet is detected on the card
+ * TrainCardInitiate        =>
+ *                          <=    TrainCardResult
+ * TrainCardVerification    =>
+ *                          <=    TrainCardComplete
+ *
+ * When no wallets are detected on the card
+ * TrainCardInitiate        =>
+ *                          <=    TrainCardResult
+ */
+
+enum TrainCardStatus {
+  TRAIN_CARD_STATUS_INIT = 0;
+  TRAIN_CARD_STATUS_CARD_TAPPED = 1;
+}
+
+message ExistingWalletItem {
+  bytes id = 1;
+  string name = 2;
+}
+
+message TrainCardInitiate {
+}
+
+message TrainCardVerification {
+  bool self_created = 1;
+}
+
+message TrainCardResult {
+  repeated ExistingWalletItem wallet_list = 1;
+  bool card_paired = 2;
+}
+
+message TrainCardComplete {
+}
+
+message TrainCardRequest {
+  oneof request {
+    TrainCardInitiate initiate = 1;
+    TrainCardVerification wallet_verify = 2;
+  }
+}
+
+message TrainCardResponse {
+  oneof response {
+    TrainCardResult result = 1;
+    TrainCardComplete flow_complete = 2;
+
+    error.CommonError common_error = 3;
+  }
+}

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+import "btc/get_public_key.proto";
+import "btc/get_xpubs.proto";
+import "btc/sign_txn.proto";
+
+import "error.proto";
+
+package btc;
+
+message Query {
+  oneof request {
+    GetPublicKeyRequest get_public_key = 1;
+    GetXpubsRequest get_xpubs = 2;
+    SignTxnRequest sign_txn = 3;
+  }
+}
+
+message Result {
+  oneof response {
+    GetPublicKeyResponse get_public_key = 1;
+    GetXpubsResponse get_xpubs = 2;
+    SignTxnResponse sign_txn = 3;
+    error.CommonError common_error = 4;
+  }
+}

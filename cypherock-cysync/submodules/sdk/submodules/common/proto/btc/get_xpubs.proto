@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+import "error.proto";
+
+package btc;
+/**
+ * Example of successful xpub generation
+ *
+ *        Host                       Device
+ * GetXpubsIntiateRequest  =>
+ *                            <= GetXpubsResultResponse (1-10 xpubs)
+ * GetXpubsFetchNextRequest =>
+ *                            <= GetXpubsResultResponse (11-20 xpubs)
+ * GetXpubsFetchNextRequest =>
+ *                            <= GetXpubsResultResponse (21-30 xpubs)
+ */
+
+enum GetXpubsStatus {
+  GET_XPUBS_STATUS_INIT = 0;
+  GET_XPUBS_STATUS_CONFIRM = 1;
+  GET_XPUBS_STATUS_SEED_GENERATED = 2;
+}
+
+message GetXpubDerivationPath {
+  repeated uint32 path = 1;
+}
+
+message GetXpubsIntiateRequest {
+  bytes wallet_id = 1;
+
+  /*
+   * xpub: m/44'/0'/0'
+   */
+  repeated GetXpubDerivationPath derivation_paths = 2;
+}
+
+message GetXpubsFetchNextRequest {
+}
+
+message GetXpubsResultResponse {
+  repeated string xpubs = 1;
+}
+
+message GetXpubsRequest {
+  oneof request {
+    GetXpubsIntiateRequest initiate = 1;
+    GetXpubsFetchNextRequest fetch_next = 2;
+  }
+}
+
+message GetXpubsResponse {
+  oneof response {
+    GetXpubsResultResponse result = 1;
+
+    error.CommonError common_error = 2;
+  }
+}

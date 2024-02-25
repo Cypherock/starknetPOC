@@ -1,0 +1,77 @@
+name: Test CI
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout Commit
+        uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.2.4
+        with:
+          version: next-8
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'pnpm'
+
+      - name: Install Protoc
+        run: |
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v22.2/protoc-22.2-linux-x86_64.zip
+          unzip protoc-22.2-linux-x86_64.zip -d $HOME/.local
+          export PATH="$PATH:$HOME/.local/bin"
+
+      - name: Check protoc installation
+        run: protoc --version
+
+      - name: pnpm install
+        run: pnpm install
+
+      - name: Setup turbo cache
+        env:
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          TURBO_API: ${{ secrets.TURBO_API }}
+        run: node scripts/setupTurboCache.js
+
+      - name: Run build
+        run: pnpm build
+
+      - name: Run linter checks
+        run: pnpm lint:check
+
+      - name: Run perttier checks
+        id: prettier
+        run: pnpm pretty:check
+        continue-on-error: true
+
+      - name: Why did prettier fail?
+        if: steps.prettier.outcome != 'success'
+        run: |
+          pnpm pretty
+          git diff
+          exit 1
+
+      - name: Run tests
+        run: pnpm test

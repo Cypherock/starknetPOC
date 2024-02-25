@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+import "version.proto";
+
+package core;
+
+enum DeviceWaitingOn {
+  DEVICE_WAITING_ON_NULL = 0;
+  DEVICE_WAITING_ON_IDLE = 1;
+  DEVICE_WAITING_ON_BUSY_IP_CARD = 2;
+  DEVICE_WAITING_ON_BUSY_IP_KEY = 3;
+}
+
+enum DeviceIdleState {
+  DEVICE_IDLE_STATE_NULL = 0;
+  DEVICE_IDLE_STATE_IDLE = 1;
+  DEVICE_IDLE_STATE_USB = 2;
+  DEVICE_IDLE_STATE_DEVICE = 3;
+}
+
+enum CmdState {
+  CMD_STATE_NONE = 0;
+  CMD_STATE_RECEIVING = 1;
+  CMD_STATE_RECEIVED = 2;
+  CMD_STATE_EXECUTING = 3;
+  CMD_STATE_DONE = 4;
+  CMD_STATE_FAILED = 5;
+  CMD_STATE_INVALID_CMD = 6;
+}
+
+enum ErrorType {
+  NO_ERROR = 0;
+  /** Invalid/unknown applet-id value */
+  UNKNOWN_APP = 1;
+  /** Decoding failed */
+  INVALID_MSG = 2;
+  /** Cannot start app as other app is running */
+  APP_NOT_ACTIVE = 3;
+  /** Timeout occured during an app */
+  APP_TIMEOUT_OCCURRED = 4;
+};
+
+message ErrorCmd {
+  uint32 applet_id = 1;
+  ErrorType type = 2;
+}
+
+message Status {
+  DeviceWaitingOn device_waiting_on = 1;
+  DeviceIdleState device_idle_state = 2;
+  bool abort_disabled = 3;
+  uint32 current_cmd_seq = 4;
+  CmdState cmd_state = 5;
+  // flow_status field can hold multiple enums of 1-byte
+  // LSB can be of type GetPublicKeyStatus
+  // LSB + 1 can be of type SeedGenerationStatus
+  uint32 flow_status = 6;
+}
+
+message Command {
+  uint32 applet_id = 1;
+}
+
+message Msg {
+  oneof type {
+    Command cmd = 1;
+    ErrorCmd error = 2;
+    AppVersionCmd app_version = 3;
+  }
+}

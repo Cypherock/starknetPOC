@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "error.proto";
+
+package btc;
+
+enum GetPublicKeyStatus {
+  GET_PUBLIC_KEY_STATUS_INIT = 0;
+  GET_PUBLIC_KEY_STATUS_CONFIRM = 1;
+  GET_PUBLIC_KEY_STATUS_SEED_GENERATED = 2;
+  GET_PUBLIC_KEY_STATUS_VERIFY = 3;
+}
+
+message GetPublicKeyIntiateRequest {
+  bytes wallet_id = 1;
+
+  /*
+   * address: m/44'/0'/0'/0/0
+   */
+  repeated uint32 derivation_path = 2;
+}
+
+message GetPublicKeyResultResponse {
+  bytes public_key = 1;
+}
+
+message GetPublicKeyRequest {
+  oneof request {
+    GetPublicKeyIntiateRequest initiate = 1;
+  }
+}
+
+message GetPublicKeyResponse {
+  oneof response {
+    GetPublicKeyResultResponse result = 1;
+
+    error.CommonError common_error = 2;
+  }
+}

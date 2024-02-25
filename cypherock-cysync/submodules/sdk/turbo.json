@@ -1,0 +1,92 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["turbo.json"],
+  "pipeline": {
+    "prebuild": {
+      "cache": true,
+      "inputs": ["scripts/prebuild.sh"]
+    },
+    "build": {
+      "dependsOn": ["prebuild", "^build"],
+      "outputs": ["dist/**", ".next/**"],
+      "inputs": ["src/**", "package.json", "tsconfig.json"]
+    },
+    "test": {
+      "dependsOn": ["build", "^test"],
+      "inputs": ["src/**", "tests/**"],
+      "cache": true
+    },
+    "lint:check": {
+      "inputs": ["src/**", "tests/**"]
+    },
+    "lint": {
+      "inputs": ["src/**", "tests/**"],
+      "cache": false
+    },
+    "pretty:check": {
+      "inputs": ["src/**", "tests/**"]
+    },
+    "pretty": {
+      "inputs": ["src/**", "tests/**"],
+      "cache": false
+    },
+    "dev": {
+      "cache": false
+    },
+    "@cypherock/sdk-core#prebuild": {
+      "cache": true,
+      "outputs": ["src/encoders/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "@cypherock/sdk-app-manager#prebuild": {
+      "cache": true,
+      "outputs": ["src/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "@cypherock/sdk-app-btc#prebuild": {
+      "cache": true,
+      "outputs": ["src/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "@cypherock/sdk-app-evm#prebuild": {
+      "cache": true,
+      "outputs": ["src/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "@cypherock/sdk-app-near#prebuild": {
+      "cache": true,
+      "outputs": ["src/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "@cypherock/sdk-app-solana#prebuild": {
+      "cache": true,
+      "outputs": ["src/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "@cypherock/sdk-interfaces#prebuild": {
+      "cache": true,
+      "outputs": ["src/proto/generated/**"],
+      "inputs": ["../../submodules/common/proto/**"]
+    },
+    "browser-test#prebuild": {
+      "cache": true,
+      "outputs": ["src/generated/bitcoinjs-lib.js"],
+      "inputs": ["package.json"]
+    },
+    "start:node": {
+      "dependsOn": ["nodejs-test#build", "^start:node"],
+      "cache": false
+    },
+    "dev:browser": {
+      "dependsOn": ["browser-test#build", "^dev:browser"],
+      "cache": false
+    },
+    "start:browser": {
+      "dependsOn": ["browser-test#build", "^start:browser"],
+      "cache": false
+    },
+    "pre-commit": {
+      "cache": false
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+    "options": {
+        "cwd": "${workspaceFolder}",
+    },
+    "tasks": [
+        {
+            "label": "build-simulator",
+            "type": "shell",
+            "command": "utilities/build.sh",
+            "args": [
+                "-tdebug",
+                "-fmain",
+                "-psimulator",
+            ],
+            "group": "build"
+        },
+
+        {
+            "label": "build-device",
+        "type": "shell",
+            "command": "utilities/build.sh",
+            "args": [
+                "-tdebug",
+                "-fmain",
+                "-pdevice",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+    ],
+    "version": "2.0.0"
+}

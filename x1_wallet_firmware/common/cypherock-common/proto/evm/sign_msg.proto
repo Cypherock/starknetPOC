@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+import "common.proto";
+import "error.proto";
+
+package evm;
+
+/**
+ * Example:
+ *
+ *        Host                       Device
+ *
+ * SignMsgInitiateRequest  => 
+ *                         <= SignMsgConfirmationResponse
+ * SignMsgData             =>
+ *                         <= SignMsgDataAccepted
+ *                        ....
+ * SignMsgData             =>
+ *                         <= SignMsgDataAccepted
+ *
+ * ******** Device has all transaction information ********
+ *      
+ *      After stitching all chunks the device will 
+ *      have message data in bytes.
+ *
+ *      If the msg type is TypedData, use 
+ *      `SignTypedDataStruct` to decode the value.
+ *      
+ * ********************************************************
+ * SignMsgSignatureRequest =>
+ *                         <= SignMsgSignatureResponse
+ */
+enum SignMsgStatus {
+  SIGN_MSG_STATUS_INIT = 0;
+  SIGN_MSG_STATUS_CONFIRM = 1;
+  SIGN_MSG_STATUS_VERIFY = 2;
+  SIGN_MSG_STATUS_SEED_GENERATED = 3;
+}
+
+enum SignMsgType {
+  SIGN_MSG_TYPE_ETH_SIGN = 0;
+  SIGN_MSG_TYPE_PERSONAL_SIGN = 1;
+  SIGN_MSG_TYPE_SIGN_TYPED_DATA = 2;
+}
+
+enum Eip712DataType {
+  EIP_712_DATA_TYPE_UINT = 0;
+  EIP_712_DATA_TYPE_INT = 1;
+  EIP_712_DATA_TYPE_BYTES = 2;
+  EIP_712_DATA_TYPE_STRING = 3;
+  EIP_712_DATA_TYPE_BOOL = 4;
+  EIP_712_DATA_TYPE_ADDRESS = 5;
+  EIP_712_DATA_TYPE_ARRAY = 6;
+  EIP_712_DATA_TYPE_STRUCT = 7;
+}
+
+message SignTypedDataNode {
+  string name = 1; 
+  Eip712DataType type = 2; 
+  uint32 size = 3; 
+  string struct_name = 4; 
+
+  optional bytes data = 5;
+  optional bytes type_hash = 6; 
+
+  repeated SignTypedDataNode children = 7;
+}
+
+message SignTypedDataStruct {
+  SignTypedDataNode domain = 1;
+  SignTypedDataNode message = 2;
+}
+
+message SignMsgInitiateRequest {
+  bytes walletId = 1;
+  repeated uint32 derivationPath = 2;
+  SignMsgType messageType = 3;
+  uint32 total_msg_size = 4;
+}
+
+message SignMsgConfirmationResponse {
+}
+
+message SignMsgData {
+  common.ChunkPayload chunk_payload = 1;
+}
+
+message SignMsgDataAccepted {
+  common.ChunkAck chunk_ack = 1;
+}
+
+message SignMsgSignatureRequest {
+}
+
+message SignMsgSignatureResponse {
+  bytes r = 1;
+  bytes s = 2;
+  bytes v = 3;
+}
+
+message SignMsgRequest {
+  oneof request {
+    SignMsgInitiateRequest initiate = 1;
+    SignMsgData msg_data = 2;
+    SignMsgSignatureRequest signature = 3;
+  }
+}
+
+message SignMsgResponse {
+  oneof response {
+    SignMsgConfirmationResponse confirmation = 1;
+    SignMsgDataAccepted data_accepted = 2;
+    SignMsgSignatureResponse signature = 3;
+
+    error.CommonError common_error = 4;
+  }
+}

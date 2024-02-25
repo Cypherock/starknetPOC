@@ -1,0 +1,27 @@
+// Install CMake extensions for vscode marketplace and add this to your settings.json
+// Set CMAKE_BUILD_PLATFORM to Device to build the code for Device
+// Set CMAKE_BUILD_PLATFORM to Simulator to build the code for Simulator
+
+{
+    "cmake.configureSettings": {
+        "CMAKE_BUILD_PLATFORM":"Device",
+        "FIRMWARE_TYPE":"Main",
+    },
+    "terminal.integrated.env.linux": {
+        "PATH": "${workspaceFolder}/venv/bin:${env:PATH}",
+    },
+    "terminal.integrated.env.osx": {
+        "PATH": "${workspaceFolder}/venv/bin:${env:PATH}",
+    },
+    "terminal.integrated.env.windows": {
+        "PATH": "${workspaceFolder}/venv/Scripts:${workspaceFolder}/venv/bin:${env:PATH}",
+    },
+    "files.associations": {
+        "*.html": "html",
+        "*.c": "c",
+        "*.h": "c",
+        "*.ld": "c",
+        "*.cmake": "cmake",
+        "CMakeLists.txt": "cmake",
+    }
+}

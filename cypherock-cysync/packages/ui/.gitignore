@@ -1,0 +1,5 @@
+.turbo
+dist
+coverage
+src/assets/icons/generated
+storybook-static

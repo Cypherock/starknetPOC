@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package error;
+
+/*
+ * When requesting for a specific wallet and it's not found
+ */
+enum WalletNotFound {
+  WALLET_NOT_FOUND_UNKNOWN = 0;
+  WALLET_NOT_FOUND_ON_DEVICE = 1;
+  WALLET_NOT_FOUND_ON_CARD = 2;
+}
+
+/*
+ * When requesting for a specific wallet and it's in partial
+ * state
+ */
+enum WalletPartialState {
+  WALLET_PARTIAL_STATE_UNKNOWN = 0;
+  WALLET_PARTIAL_STATE_LOCKED = 1;
+  WALLET_PARTIAL_STATE_DELETE = 2;
+  WALLET_PARTIAL_STATE_UNVERIFIED = 3;
+  WALLET_PARTIAL_STATE_OUT_OF_SYNC = 4;
+}
+
+/*
+ * When the card operation fails, one of these errors is communicated by device.
+ * For card specific errors, a card error Status word(SW) is returned, else `CARD_ERROR_UNKNOWN`.
+ */
+enum CardError {
+  CARD_ERROR_UNKNOWN = 0;                     // Error logged locally on device but spcific case unknown
+  CARD_ERROR_NOT_PAIRED = 1;                  // Error occured as card is not paired.
+
+  CARD_ERROR_SW_INCOMPATIBLE_APPLET = 3;        // Incompatible applet version
+  CARD_ERROR_SW_NULL_POINTER_EXCEPTION = 4;     // Null pointer exception
+  CARD_ERROR_SW_TRANSACTION_EXCEPTION = 5;      // Operation failed on card (Tx Exp)
+  CARD_ERROR_SW_FILE_INVALID = 6;               // Tapped card family id mismatch
+  CARD_ERROR_SW_SECURITY_CONDITIONS_NOT_SATISFIED = 7; // Security conditions not satisfied, i.e. pairing session invalid
+  CARD_ERROR_SW_CONDITIONS_NOT_SATISFIED = 8;   // Wrong card sequence
+  CARD_ERROR_SW_WRONG_DATA = 9;                 // Invalid APDU length
+  CARD_ERROR_SW_FILE_NOT_FOUND = 10;            // Curropted card
+  CARD_ERROR_SW_RECORD_NOT_FOUND = 11;          // Wallet does not exist on device
+  CARD_ERROR_SW_FILE_FULL = 12;                 // Card is full
+  CARD_ERROR_SW_CORRECT_LENGTH_00 = 13;         // Incorrect pin intered
+  CARD_ERROR_SW_INVALID_INS = 14;               // Apllet unknown error
+  CARD_ERROR_SW_NOT_PAIRED = 15;                // Card pairing to device missing
+  CARD_ERROR_SW_CRYPTO_EXCEPTION = 16;          // Operation failed on card (Crypto Exp)
+  CARD_ERROR_POW_SW_WALLET_LOCKED = 17;         // Locked wallet status word, POW meaning proof of word
+  CARD_ERROR_SW_INS_BLOCKED = 18;               // Card health critical, migration required
+  CARD_ERROR_SW_OUT_OF_BOUNDARY = 19;           // Operation failed on card (Out of boundary)
+}
+
+/*
+ * When user rejects the operation
+ */
+enum UserRejection {
+  USER_REJECTION_UNKNOWN = 0;
+  USER_REJECTION_CONFIRMATION = 1;
+}
+
+enum DataFlow {
+  /* protobuf decoding by nanopb api failed */
+  DATA_FLOW_DECODING_FAILED = 0; // will this cover situation of enum out of range?
+
+  /* query received is: invalid or is of different app_function (eg. device
+   * auth in between get logs)
+   */
+  DATA_FLOW_INVALID_QUERY = 1;
+
+  /* protobuf `optional` fields when checked on receiving end was absent. */
+  DATA_FLOW_FIELD_MISSING = 2;
+
+  /* Wrong request is received in app_function. could be at start of flow
+   * or in-between the flow
+   */
+  DATA_FLOW_INVALID_REQUEST = 3;
+
+  /* inactivity during wait-for-data from host. In-between a flow */
+  DATA_FLOW_INACTIVITY_TIMEOUT = 4;
+
+  /* when the flow specific data validity fails. could be at start of flow
+   * or in-between the flow
+   */
+  DATA_FLOW_INVALID_DATA = 5;
+
+  /* query received is: when app in unserviceable state (eg. export wallet
+   * request before on-boarding, export wallet request on unauthenticated
+   * device on main
+   */
+  DATA_FLOW_QUERY_NOT_ALLOWED = 6;
+}
+
+message CommonError {
+  // For future error codes
+  reserved 3;
+  reserved 5 to 10;
+  reserved 13 to 20;
+
+  oneof error {
+    // ****** Protocol specific errors ******
+    uint32 unknown_error = 1;
+    DataFlow corrupt_data = 2;
+
+    // The user needs to complete device setup
+    uint32 device_setup_required = 4;
+
+    // ****** Wallet specific errors ******
+
+    // The specified wallet does not exist
+    WalletNotFound wallet_not_found = 11;
+
+    // The specified wallet is in partial state
+    WalletPartialState wallet_partial_state = 12;
+
+    // ****** User action errors ******
+    // Card Error
+    CardError card_error = 21;
+
+    // User rejection error
+    UserRejection user_rejection = 22;
+  }
+}
