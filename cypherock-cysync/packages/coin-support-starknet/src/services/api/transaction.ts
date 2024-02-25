@@ -1,9 +1,11 @@
+import { getStarknetApiJs } from '@cypherock/sdk-app-starknet/dist/utils';
 import {
   IPreparedStarknetTransaction,
   IStarknetAccount,
 } from '../../operations/types';
 import logger from '../../utils/logger';
 import { config } from '../../config';
+import { BigNumber } from '@cypherock/cysync-utils';
 
 const contractAXclassHash =
   '0x01a736d6ed154502257f02b1ccdf4d9d1089f80811cd6acad48e6b6a9d1f2003';
@@ -34,8 +36,41 @@ export const broadcastTransactionToBlockchain = async (
   account: IStarknetAccount,
   signature: string,
 ): Promise<string> => {
-  logger.verbose({transaction, account, signature});
-  return '';
+  const starknetjs = getStarknetApiJs();
+  const constructorAXCallData = starknetjs.CallData.compile([
+    account.extraData.salt ?? '0x00',
+    0,
+  ]);
+  const txnVersion = '0x1';
+  let txn: any = {};
+  if (!provider) {
+    provider = new (getStarknetApiJs().RpcProvider)({ nodeUrl });
+  }
+
+  if (transaction.userInputs.txnType === 'deploy') {
+    txn = await provider.deployAccountContract(
+      {
+        classHash: contractAXclassHash,
+        addressSalt: account.extraData.salt ?? '0x00',
+        constructorCalldata: constructorAXCallData,
+        signature: [
+          `0x${signature.slice(0, 64)}`,
+          `0x${signature.slice(64, 128)}`,
+        ],
+      },
+      {
+        nonce: 0,
+        version: txnVersion,
+        maxFee: new BigNumber(transaction.computedData.maxFee, 16).toNumber(),
+      },
+    );
+    console.log({ BroadcastedTransaction: txn });
+  }
+
+  if (!txn.transaction_hash) {
+    throw new Error('Broadcast error. Transaction hash undefined.');
+  }
+  return txn.transaction_hash;
 };
 
 export const estimateFee = async (action: 'deploy' | 'transfer') => {

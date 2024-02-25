@@ -89,6 +89,45 @@ async function fetchAccount(connection: IDeviceConnection) {
   return {accountAXAddress, starkKeyPubAX, wallet};
 }
 
+// ================ Starknet App -- Account deploy if not already ========== //
+async function deployAddress(connection: IDeviceConnection, wallet: IWalletItem) {
+
+  const starkApp = await StarknetApp.create(connection);
+  const starkKeyPubAX = (await starkApp.getPublicKeys({
+    walletId: wallet.id,
+    derivationPaths: [{ path: [0x80000000 + 44, 0x80000000 + 9004, 0x80000000, 0, index] }]
+  })).publicKeys[0];
+
+  const constructorAXCallData = starknetApiJs.CallData.compile([starkKeyPubAX,0]);
+  const accountAXAddress = starknetApiJs.hash.calculateContractAddressFromHash(starkKeyPubAX, contractAXclassHash, constructorAXCallData, 0);
+  console.log("Deploying address : ", {accountAXAddress});
+
+  const txnVersion = 1;
+  const maxFee = 0x8110e6d36a8;
+  const deployAccountTxnHash = starknetApiJs.hash.calculateDeployAccountTransactionHash(
+    accountAXAddress, contractAXclassHash, constructorAXCallData, starkKeyPubAX,
+    txnVersion, maxFee, starknetApiJs.constants.StarknetChainId.SN_GOERLI, 0);
+  const sig = await starkApp.signTxn({
+    derivationPath: [0x80000000 + 44, 0x80000000 + 9004, 0x80000000, 0, index],
+    txn: deployAccountTxnHash,
+    walletId: wallet.id,
+  });
+  console.log("sig : ", {sig});
+  const signature = [`0x${sig.signature.slice(0, 64)}`, `0x${sig.signature.slice(64, 128)}`];
+  const txn = await provider.deployAccountContract({
+    classHash: contractAXclassHash,
+    addressSalt: starkKeyPubAX,
+    constructorCalldata: constructorAXCallData,
+    signature: signature}, {
+      nonce: 0,
+      version: txnVersion,
+      maxFee: maxFee
+    });
+  
+  console.log("Deploying txn : ", {txn});
+  return txn;
+}
+
 const run = async () => {
   updateLogger(createServiceLogger);
   updateLoggerCore(createServiceLogger);
@@ -110,6 +149,8 @@ const run = async () => {
 
   const {accountAXAddress, wallet} = await fetchAccount(connection);
   console.log(await fetchBalances(accountAXAddress));
+  console.log(await deployAddress(connection, wallet));
+
   connection.destroy();
 };
 

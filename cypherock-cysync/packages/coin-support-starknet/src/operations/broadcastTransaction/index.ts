@@ -12,6 +12,9 @@ import {
 
 import { IBroadcastStarknetTransactionParams } from './types';
 
+import { broadcastTransactionToBlockchain } from '../../services';
+import { IStarknetAccount } from '../types';
+
 export const broadcastTransaction = async (
   params: IBroadcastStarknetTransactionParams,
 ): Promise<ITransaction> => {
@@ -26,8 +29,14 @@ export const broadcastTransaction = async (
     params.transaction.computedData.output.address?.toLowerCase() ===
     account.xpubOrAddress.toLowerCase();
 
+  const txnHash = await broadcastTransactionToBlockchain(
+    params.transaction,
+    account as IStarknetAccount,
+    params.signedTransaction,
+  );
+
   const parsedTransaction: ITransaction = {
-    hash: '',
+    hash: txnHash,
     fees: transaction.computedData.maxFee,
     amount: '0',
     status: TransactionStatusMap.pending,

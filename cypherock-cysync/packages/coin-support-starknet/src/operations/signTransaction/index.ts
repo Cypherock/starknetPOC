@@ -23,6 +23,13 @@ import { getStarknetApiJs } from '@cypherock/sdk-app-starknet/dist/utils';
 import { BigNumber } from '@cypherock/cysync-utils';
 import { config } from '../../config';
 
+const contractAXclassHash =
+  '0x01a736d6ed154502257f02b1ccdf4d9d1089f80811cd6acad48e6b6a9d1f2003';
+const ethContractAddress =
+  '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+// const strkContractAddress =
+//   '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+
 const nodeUrl = `https://starknet-goerli.infura.io/v3/${config.INFURA_STARKNET_API_KEY}`;
 let provider: any = null;
 
@@ -31,8 +38,46 @@ const prepareUnsignedTxn = async (
   coin: IStarknetCoinInfo,
   account: IAccount,
 ): Promise<ISignTxnParams['txn']> => {
-  logger.verbose({transaction, coin, account});
-  return '';
+  assert(coin, new Error('Failed to prepare unsigned transaction'));
+  assert(account, new Error('Failed to prepare unsigned transaction'));
+  const txn: { unsignedSerialized: string | undefined } = {
+    unsignedSerialized: undefined,
+  };
+  assert(
+    account.extraData,
+    new Error('Starknet salt not found. Reset db and add account again'),
+  );
+  assert(
+    account.extraData.salt,
+    new Error('Starknet salt not found. Reset db and add account again'),
+  );
+  const starknetjs = getStarknetApiJs();
+  if (transaction.userInputs.txnType === 'deploy') {
+    const constructorAXCallData = starknetjs.CallData.compile([
+      account.extraData.salt,
+      0,
+    ]);
+    const deployAccountTxnHash =
+      starknetjs.hash.calculateDeployAccountTransactionHash(
+        account.xpubOrAddress,
+        contractAXclassHash,
+        constructorAXCallData,
+        account.extraData.salt,
+        1,
+        new BigNumber(transaction.computedData.maxFee, 16).toNumber(),
+        starknetjs.constants.StarknetChainId.SN_GOERLI,
+        0,
+      );
+    txn.unsignedSerialized = `${deployAccountTxnHash}`;
+  } else {
+    txn.unsignedSerialized = '';
+  }
+  assert(
+    txn.unsignedSerialized,
+    new Error('Failed to prepare unsigned transaction'),
+  );
+
+  return txn.unsignedSerialized;
 };
 
 const signTransactionFromDevice: SignTransactionFromDevice<

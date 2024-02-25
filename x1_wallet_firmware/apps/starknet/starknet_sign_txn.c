@@ -235,23 +235,121 @@ static bool validate_request_data(const starknet_sign_txn_request_t *request) {
 }
 
 static bool handle_initiate_query(const starknet_query_t *query) {
+  char wallet_name[NAME_SIZE] = "";
+  char msg[100] = "";
+
+  if (!check_which_request(query, STARKNET_SIGN_TXN_REQUEST_INITIATE_TAG) ||
+      !validate_request_data(&query->sign_txn) ||
+      !get_wallet_name_by_id(query->sign_txn.initiate.wallet_id,
+                             (uint8_t *)wallet_name,
+                             starknet_send_error)) {
+    return false;
+  }
+
+  snprintf(msg,
+           sizeof(msg),
+           UI_TEXT_SIGN_TXN_PROMPT,
+           starknet_app.name,
+           wallet_name);
+  // Take user consent to sign transaction for the wallet
+  if (!core_confirmation(msg, starknet_send_error)) {
+    return false;
+  }
+
+  set_app_flow_status(STARKNET_SIGN_TXN_STATUS_CONFIRM);
+  memcpy(&starknet_txn_context->init_info,
+         &query->sign_txn.initiate,
+         sizeof(starknet_sign_txn_initiate_request_t));
+
+  send_response(STARKNET_SIGN_TXN_RESPONSE_CONFIRMATION_TAG);
+  // show processing screen for a minimum duration (additional time will add due
+  // to actual processing)
+  delay_scr_init(ui_text_processing, DELAY_SHORT);
   return true;
 }
 
 static bool fetch_valid_input(starknet_query_t *query) {
+  if (!starknet_get_query(query, STARKNET_QUERY_SIGN_TXN_TAG) &&
+      !check_which_request(query, STARKNET_SIGN_TXN_REQUEST_TXN_TAG)) {
+    return false;
+  }
+
+  memcpy(starknet_txn_context->transaction,
+         query->sign_txn.txn.txn.bytes,
+         query->sign_txn.txn.txn.size);
+
+  if (1) {
+    send_response(STARKNET_SIGN_TXN_RESPONSE_UNSIGNED_TXN_ACCEPTED_TAG);
+    return true;
+  } else {
+    starknet_send_error(ERROR_COMMON_ERROR_CORRUPT_DATA_TAG,
+                        ERROR_DATA_FLOW_INVALID_DATA);
+    return false;
+  }
+
   return false;
 }
 
 static bool get_user_verification(void) {
   bool user_verified = false;
+  char msg[128] = "0x";
+
+  byte_array_to_hex_string(starknet_txn_context->transaction, 32, &msg[2], 126);
+  // TODO: Add blind signing warning
+  user_verified =
+      core_confirmation(UI_TEXT_BLIND_SIGNING_WARNING, starknet_send_error);
+  user_verified &= core_scroll_page(NULL, msg, starknet_send_error);
+
+  if (user_verified) {
+    set_app_flow_status(STARKNET_SIGN_TXN_STATUS_VERIFY);
+  }
+
   return user_verified;
 }
 
 static bool sign_txn(uint8_t *signature_buffer) {
+  uint8_t seed[64] = {0};
+  if (!reconstruct_seed(starknet_txn_context->init_info.wallet_id,
+                        seed,
+                        starknet_send_error)) {
+    memzero(seed, sizeof(seed));
+    return false;
+  }
+
+  set_app_flow_status(STARKNET_SIGN_TXN_STATUS_SEED_GENERATED);
+
+  uint8_t stark_key[32] = {0};
+  if (starknet_derive_bip32_node(seed, stark_key) &&
+      starknet_derive_key_from_seed(
+          stark_key,
+          starknet_txn_context->init_info.derivation_path,
+          starknet_txn_context->init_info.derivation_path_count,
+          stark_key)) {
+    // TODO: Generate signature using stark_key
+    memcpy(signature_buffer, stark_key, sizeof(stark_key));
+  } else {
+    starknet_send_error(ERROR_COMMON_ERROR_UNKNOWN_ERROR_TAG, 1);
+  }
+
+  memzero(seed, sizeof(seed));
+  memzero(stark_key, sizeof(stark_key));
+
   return true;
 }
 
 static bool send_signature(starknet_query_t *query, const uint8_t *signature) {
+  starknet_result_t result = init_starknet_result(STARKNET_RESULT_SIGN_TXN_TAG);
+  result.sign_txn.which_response = STARKNET_SIGN_TXN_RESPONSE_SIGNATURE_TAG;
+
+  if (!starknet_get_query(query, STARKNET_QUERY_SIGN_TXN_TAG) ||
+      !check_which_request(query, STARKNET_SIGN_TXN_REQUEST_SIGNATURE_TAG)) {
+    return false;
+  }
+
+  memcpy(&result.sign_txn.signature.signature[0],
+         signature,
+         sizeof(result.sign_txn.signature.signature));
+  starknet_send_result(&result);
   return true;
 }
 

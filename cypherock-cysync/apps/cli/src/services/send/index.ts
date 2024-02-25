@@ -28,6 +28,7 @@ import {
 } from '~/utils';
 
 import { queryAccount, queryWallet } from '../helpers';
+import { IPreparedStarknetTransaction } from '@cypherock/coin-support-starknet';
 
 const preparingTxnSpinnerText = 'Preparing transaction';
 const creatingTxnSpinnerText = 'Creating transaction';
@@ -144,6 +145,12 @@ const getTxnInputs = async (params: {
     }).amount;
   }
 
+  if (coin.family === coinFamiliesMap.starknet) {
+    const txn = transaction as IPreparedStarknetTransaction;
+    txn.userInputs.txnType = transactionType !== 'deploy' ? 'transfer' : 'deploy';
+    if (txn.userInputs.txnType !== 'deploy') {
+    }
+  }
 };
 
 const showTransactionSummary = async (params: {
@@ -212,6 +219,19 @@ const showTransactionSummary = async (params: {
     });
     console.log(`Transaction fees: ${colors.cyan(`${amount} ${unit.abbr}`)}`);
     totalToDeduct = totalToDeduct.plus(txn.computedData.fees);
+  }
+
+  if (coin.family === coinFamiliesMap.starknet) {
+    const txn = transaction as IPreparedStarknetTransaction;
+    const { amount, unit } = getParsedAmount({
+      coinId: coin.id,
+      amount: new BigNumber(txn.computedData.maxFee, 16).toString(10),
+      unitAbbr:
+        account.unit ??
+        getZeroUnit(account.parentAssetId, account.assetId).abbr,
+    });
+    console.log(`Transaction fees: ${colors.cyan(`${amount} ${unit.abbr}`)}`);
+    totalToDeduct = totalToDeduct.plus(txn.computedData.maxFee, 16);
   }
 
   const { amount, unit } = getParsedAmount({
