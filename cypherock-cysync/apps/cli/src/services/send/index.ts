@@ -149,6 +149,25 @@ const getTxnInputs = async (params: {
     const txn = transaction as IPreparedStarknetTransaction;
     txn.userInputs.txnType = transactionType !== 'deploy' ? 'transfer' : 'deploy';
     if (txn.userInputs.txnType !== 'deploy') {
+      const { amount, unit } = getParsedAmount({
+        coinId: coin.id,
+        amount: txn.staticData.maxFee,
+        unitAbbr: 'ETH',
+      });
+      const fee = await queryInput(
+        `Enter the fee for the transaction (Suggested: ${amount} ${unit.abbr})`,
+      );
+
+      if (transactionType !== 'deploy' && outputCount <= 0) {
+        throw new Error('Invalid output count');
+      }
+
+      txn.userInputs.maxFee = convertToUnit({
+        amount: fee,
+        coinId: coin.id,
+        fromUnitAbbr: `ETH`,
+        toUnitAbbr: getZeroUnit(coin.id).abbr,
+      }).amount;
     }
   }
 };

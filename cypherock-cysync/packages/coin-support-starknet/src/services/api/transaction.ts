@@ -65,6 +65,40 @@ export const broadcastTransactionToBlockchain = async (
       },
     );
     console.log({ BroadcastedTransaction: txn });
+  } else if (transaction.userInputs.txnType === 'transfer') {
+    const recipientAddress = transaction.userInputs.outputs[0].address;
+    const maxFee = new BigNumber(
+      transaction.computedData.maxFee,
+    ).toNumber();
+    const { amount } = transaction.userInputs.outputs[0];
+
+    const transferCallData = [
+      txnVersion,
+      ethContractAddress,
+      starknetjs.hash.getSelectorFromName('transfer'),
+      '0x3',
+      recipientAddress,
+      amount,
+      '0x0',
+    ];
+
+    txn = await provider.invokeFunction(
+      {
+        contractAddress: account.xpubOrAddress,
+        entrypoint: transaction.userInputs.txnType,
+        calldata: transferCallData,
+        signature: [
+          `0x${signature.slice(0, 64)}`,
+          `0x${signature.slice(64, 128)}`,
+        ],
+      },
+      {
+        nonce: await provider.getNonceForAddress(account.xpubOrAddress),
+        version: 1,
+        maxFee,
+      },
+    );
+    console.log({ BroadcastedTransaction: txn });
   }
 
   if (!txn.transaction_hash) {

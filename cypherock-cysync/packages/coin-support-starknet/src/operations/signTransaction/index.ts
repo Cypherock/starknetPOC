@@ -69,6 +69,35 @@ const prepareUnsignedTxn = async (
         0,
       );
     txn.unsignedSerialized = `${deployAccountTxnHash}`;
+  } else if (transaction.userInputs.txnType === 'transfer') {
+    const recipientAddress = transaction.userInputs.outputs[0].address;
+    const maxFee = new BigNumber(
+      transaction.computedData.maxFee,
+    ).toNumber();
+    const { amount } = transaction.userInputs.outputs[0];
+
+    const txnVersion = '0x1';
+    const transferCallData = [
+      txnVersion,
+      ethContractAddress,
+      starknetjs.hash.getSelectorFromName('transfer'),
+      '0x3',
+      recipientAddress,
+      amount,
+      '0x0',
+    ];
+    if (!provider) {
+      provider = new (getStarknetApiJs().RpcProvider)({ nodeUrl });
+    }
+    const transferFundTxnHash = starknetjs.hash.calculateTransactionHash(
+      account.xpubOrAddress,
+      txnVersion,
+      transferCallData,
+      maxFee,
+      starknetjs.constants.StarknetChainId.SN_GOERLI,
+      await provider.getNonceForAddress(account.xpubOrAddress),
+    );
+    txn.unsignedSerialized = `${transferFundTxnHash}`;
   } else {
     txn.unsignedSerialized = '';
   }

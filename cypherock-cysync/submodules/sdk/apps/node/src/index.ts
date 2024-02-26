@@ -128,6 +128,51 @@ async function deployAddress(connection: IDeviceConnection, wallet: IWalletItem)
   return txn;
 }
 
+// ================ Starknet App -- Account deploy if not already ========== //
+async function transfer(connection: IDeviceConnection, wallet: IWalletItem, recipientAddress: string, amount: starknetApiJs.Uint256) {
+  const starkApp = await StarknetApp.create(connection);
+  const starkKeyPubAX = (await starkApp.getPublicKeys({
+    walletId: wallet.id,
+    derivationPaths: [{ path: [0x80000000 + 44, 0x80000000 + 9004, 0x80000000, 0, index] }]
+  })).publicKeys[0];
+
+  const constructorAXCallData = starknetApiJs.CallData.compile([starkKeyPubAX,0]);
+  const accountAXAddress = starknetApiJs.hash.calculateContractAddressFromHash(starkKeyPubAX, contractAXclassHash, constructorAXCallData, 0);
+  console.log("Transfering from : ", {accountAXAddress});
+
+  const txnVersion = 1;
+  const maxFee = 0x8110e6d36a8;
+  const nonce = await provider.getNonceForAddress(accountAXAddress);
+
+  const transferTxnHash = starknetApiJs.hash.calculateTransactionHash(
+    strkContractAddress, txnVersion, constructorAXCallData, maxFee,
+    starknetApiJs.constants.StarknetChainId.SN_GOERLI, nonce
+  );
+
+  const sig = await starkApp.signTxn({
+    derivationPath: [0x80000000 + 44, 0x80000000 + 9004, 0x80000000, 0, index],
+    txn: transferTxnHash,
+    walletId: wallet.id,
+  });
+  const signature = [`0x${sig.signature.slice(0, 64)}`, `0x${sig.signature.slice(64, 128)}`];
+
+  const txn = await provider.invokeFunction({
+    contractAddress: strkContractAddress,
+    entrypoint: 'transfer',
+    calldata: {
+      recipient: recipientAddress,
+      amount: amount
+    },
+    signature: signature
+  }, {
+    nonce: nonce,
+    version: txnVersion,
+    maxFee: maxFee
+  });
+  console.log("transferStrk : ", {txn});
+  return txn;
+}
+
 const run = async () => {
   updateLogger(createServiceLogger);
   updateLoggerCore(createServiceLogger);
@@ -150,6 +195,9 @@ const run = async () => {
   const {accountAXAddress, wallet} = await fetchAccount(connection);
   console.log(await fetchBalances(accountAXAddress));
   console.log(await deployAddress(connection, wallet));
+  // console.log(await fetchBalances(accountAXAddress));
+  // console.log(await transfer(connection, wallet, '0x0063de007721dDD7CCCA23Dd9345b70F77Af7B2FCcED9E3df1f390D0f1c61E9D', starknetApiJs.cairo.uint256(5 * (10**8)))); // Account 3
+  // console.log(await fetchBalances(accountAXAddress));
 
   connection.destroy();
 };
